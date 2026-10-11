@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>منبه انقطاع الكهرباء</title>
+<meta name="theme-color" content="#0b1220">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+<div id="app" dir="rtl" lang="ar">
+  <header class="topbar">
+    <div class="logo">⚡</div>
+    <div>
+      <h1>منبه انقطاع الكهرباء</h1>
+      <p class="sub">وصّل الشاحن • شغّل المراقبة • نام مرتاح</p>
+    </div>
+  </header>
+
+  <div id="noBatteryWarn" class="warn" hidden>
+    ⚠️ متصفحك لا يدعم قراءة البطارية (مثل آيفون سفاري). التطبيق سيعمل في <b>الوضع اليدوي / التجريبي</b>.
+    استخدم هاتف أندرويد مع كروم للحصول على كشف تلقائي دقيق.
+  </div>
+
+  <div id="notPluggedWarn" class="warn" hidden>
+    🔌 الشاحن غير موصول. وصّل الشاحن بالكهرباء وبالهاتف لبدء كشف دقيق.
+  </div>
+
+  <section id="statusCard" class="status unknown">
+    <div id="statusDot" class="dot"></div>
+    <div id="statusTitle" class="status-title">بانتظار بدء المراقبة</div>
+    <div id="statusDesc" class="status-desc">اضغط زر بدء المراقبة بالأسفل</div>
+    <div id="alarmBanner" class="alarm-banner" hidden>🔔 المنبه يعمل الآن — اضغط إيقاف المنبه</div>
+  </section>
+
+  <section class="grid">
+    <div class="card"><span class="lbl">الشحن</span><b id="chargeStateEl">—</b></div>
+    <div class="card"><span class="lbl">البطارية</span><b id="batteryEl">—</b></div>
+    <div class="card"><span class="lbl">المراقبة</span><b id="monitorEl">متوقفة</b></div>
+    <div class="card"><span class="lbl">المدة</span><b id="durationEl">00:00:00</b></div>
+  </section>
+
+  <section class="controls">
+    <button id="startBtn" class="primary">▶ بدء المراقبة</button>
+    <button id="stopMonBtn" class="ghost" hidden>⏹ إيقاف المراقبة</button>
+    <button id="stopAlarmBtn" class="danger blink" hidden>🔇 إيقاف المنبه</button>
+  </section>
+
+  <section class="controls row2">
+    <button id="testCutBtn" class="small">🔊 تجربة صوت الانقطاع</button>
+    <button id="testBackBtn" class="small">🔔 تجربة صوت العودة</button>
+  </section>
+
+  <section id="manualBox" class="panel">
+    <h3>🧪 محاكاة تجريبية (للتجربة بدون فصل الكهرباء)</h3>
+    <p>جرّب شكل التنبيه الحقيقي هنا:</p>
+    <div class="controls">
+      <button id="simCutBtn" class="small danger2">⚡ محاكاة انقطاع</button>
+      <button id="simBackBtn" class="small ok">✅ محاكاة عودة</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h3>⚙️ الإعدادات</h3>
+    <label class="opt"><input type="checkbox" id="alarmOnCut" checked> تنبيه عند الانقطاع (صفارة + اهتزاز)</label>
+    <label class="opt"><input type="checkbox" id="alarmOnBack" checked> تنبيه عند عودة الكهرباء</label>
+    <label class="opt"><input type="checkbox" id="vibOpt" checked> اهتزاز عند التنبيه</label>
+    <label class="opt"><input type="checkbox" id="flashOpt" checked> وميض الشاشة عند التنبيه</label>
+    <label class="opt"><input type="checkbox" id="notifOpt" checked> إشعار نظام عند الحدث</label>
+    <div class="opt-row">
+      <label>تأخير قبل التنبيه لتفادي الإنذار الكاذب:</label>
+      <select id="delaySel">
+        <option value="0">فوري</option>
+        <option value="3">3 ثواني</option>
+        <option value="5" selected>5 ثواني</option>
+        <option value="10">10 ثواني</option>
+        <option value="30">30 ثانية</option>
+      </select>
+    </div>
+    <div class="opt-row">
+      <label>نوع الصوت:</label>
+      <select id="soundSel">
+        <option value="siren" selected>🚨 صفارة طوارئ (صعود/نزول)</option>
+        <option value="beep">🔊 بيب متقطع</option>
+        <option value="steady">📢 نغمة مستمرة عالية</option>
+      </select>
+    </div>
+    <div class="opt-row">
+      <label>مستوى الصوت: <b id="volLbl">100%</b></label>
+      <input type="range" id="volRange" min="10" max="100" value="100">
+    </div>
+  </section>
+
+  <section class="panel">
+    <h3>📝 سجل الأحداث <button id="clearLogBtn" class="tiny">مسح</button></h3>
+    <ul id="logEl" class="log"><li class="empty">لا أحداث بعد</li></ul>
+  </section>
+
+  <section class="panel help">
+    <h3>❓ كيف تستخدمه؟</h3>
+    <ol>
+      <li>وصّل هاتفك بالشاحن في فيش الكهرباء الذي تريد مراقبته.</li>
+      <li>اضغط <b>بدء المراقبة</b> وامنح إذن الإشعارات إن طلب.</li>
+      <li>اترك الصفحة مفتوحة والشاشة مضيئة قدر الإمكان. فعّل عدم القفل التلقائي إن أمكن.</li>
+      <li>عند انقطاع الكهرباء يتوقف الشحن ← التطبيق يطلق صفارة عالية واهتزاز ووميض.</li>
+      <li>اضغط <b>إيقاف المنبه</b> لإسكاته. كل حدث يُسجل بالوقت بالأسفل.</li>
+    </ol>
+    <p class="note">💡 نصيحة: ارفع صوت الهاتف للآخر، وجرّب الصوت أولاً بزر التجربة. على الحاسوب المكتبي بدون بطارية استخدم الوضع اليدوي.</p>
+  </section>
+</div>
+
+<style>
+  body { margin:0; background:#0b1220; color:#eaf0ff; text-align:center; font-family: system-ui, Tahoma, Arial, sans-serif; }
+  #app { max-width:560px; margin:0 auto; padding:14px 14px 60px; direction:rtl; }
+  .topbar { display:flex; gap:12px; align-items:center; justify-content:center; margin:6px 0 12px; }
+  .logo { font-size:44px; background:#1e293b; width:64px; height:64px; display:flex; align-items:center; justify-content:center; border-radius:18px; box-shadow:0 4px 18px rgba(0,0,0,.4); }
+  h1 { font-size:22px; margin:0; }
+  .sub { margin:2px 0 0; opacity:.7; font-size:13px; }
+  .warn { background:#451a03; border:1px solid #f59e0b; color:#fde68a; border-radius:12px; padding:10px; margin:10px 0; font-size:14px; line-height:1.7; }
+  .status { border-radius:18px; padding:22px 14px; margin:10px 0; border:2px solid #334155; background:#111c33; transition:all .3s; }
+  .status.unknown { border-color:#475569; }
+  .status.on { border-color:#22c55e; background:linear-gradient(180deg,#052e1b,#0b3d25); box-shadow:0 0 24px rgba(34,197,94,.35); }
+  .status.off { border-color:#ef4444; background:linear-gradient(180deg,#3b0a0a,#5a1010); box-shadow:0 0 28px rgba(239,68,68,.5); animation:pulse 1s infinite alternate; }
+  @keyframes pulse { from{transform:scale(1)} to{transform:scale(1.015)} }
+  .dot { width:18px; height:18px; border-radius:50%; background:#64748b; margin:0 auto 8px; box-shadow:0 0 10px currentColor; }
+  .status.on .dot { background:#22c55e; color:#22c55e; }
+  .status.off .dot { background:#ef4444; color:#ef4444; }
+  .status-title { font-size:24px; font-weight:800; }
+  .status-desc { opacity:.85; margin-top:6px; font-size:14px; }
+  .alarm-banner { margin-top:12px; background:#fef08a; color:#713f12; font-weight:800; border-radius:10px; padding:8px; animation:blink .7s infinite alternate; }
+  @keyframes blink { from{opacity:1} to{opacity:.55} }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0; }
+  .card { background:#151f36; border:1px solid #263451; border-radius:12px; padding:10px; }
+  .card .lbl { display:block; font-size:12px; opacity:.65; }
+  .card b { font-size:17px; }
+  .controls { display:flex; gap:8px; justify-content:center; margin:12px 0; flex-wrap:wrap; }
+  button { font-family:inherit; cursor:pointer; border:none; border-radius:12px; padding:13px 20px; font-size:16px; font-weight:700; }
+  .primary { background:#22c55e; color:#052e16; flex:1; min-width:200px; }
+  .ghost { background:#334155; color:white; flex:1; min-width:160px; }
+  .danger { background:#ef4444; color:white; flex:1; min-width:200px; font-size:19px; }
+  .blink { animation:blink .6s infinite alternate; }
+  .small { background:#1e293b; color:#e2e8f0; border:1px solid #334155; font-size:14px; padding:10px 14px; flex:1; }
+  .danger2 { background:#7f1d1d; color:#fecaca; border:1px solid #ef4444; }
+  .ok { background:#14532d; color:#bbf7d0; border:1px solid #22c55e; }
+  .tiny { font-size:12px; padding:4px 10px; background:#334155; color:white; border-radius:8px; }
+  .panel { background:#111a30; border:1px solid #243350; border-radius:14px; padding:12px; margin:12px 0; text-align:right; }
+  .panel h3 { margin:0 0 8px; font-size:16px; text-align:right; }
+  .opt { display:block; margin:8px 0; font-size:14px; background:#0f1830; padding:8px 10px; border-radius:10px; }
+  .opt input { transform:scale(1.3); margin-left:8px; }
+  .opt-row { display:flex; gap:10px; align-items:center; justify-content:space-between; margin:10px 0; font-size:14px; flex-wrap:wrap; }
+  select { background:#0f1830; color:white; border:1px solid #334155; border-radius:10px; padding:8px; font-size:14px; font-family:inherit; }
+  input[type=range] { width:160px; accent-color:#22c55e; }
+  .log { list-style:none; padding:0; margin:0; max-height:220px; overflow:auto; }
+  .log li { background:#0f1830; margin:6px 0; padding:8px 10px; border-radius:10px; font-size:13px; border-right:4px solid #475569; text-align:right; }
+  .log li.cut { border-right-color:#ef4444; }
+  .log li.back { border-right-color:#22c55e; }
+  .log li.info { border-right-color:#38bdf8; }
+  .log .empty { text-align:center; opacity:.6; }
+  .help ol { margin:0; padding-right:20px; line-height:1.9; font-size:14px; }
+  .note { background:#082f49; border:1px solid #0ea5e9; border-radius:10px; padding:8px; font-size:13px; line-height:1.7; }
+  body.flashing { filter:invert(0.12) brightness(1.6); }
+</style>
+
+<script>
+(function(){
+  var startBtn = document.getElementById('startBtn');
+  var stopMonBtn = document.getElementById('stopMonBtn');
+  var stopAlarmBtn = document.getElementById('stopAlarmBtn');
+  var statusCard = document.getElementById('statusCard');
+  var statusTitle = document.getElementById('statusTitle');
+  var statusDesc = document.getElementById('statusDesc');
+  var chargeStateEl = document.getElementById('chargeStateEl');
+  var batteryEl = document.getElementById('batteryEl');
+  var monitorEl = document.getElementById('monitorEl');
+  var durationEl = document.getElementById('durationEl');
+  var alarmBanner = document.getElementById('alarmBanner');
+  var noBatteryWarn = document.getElementById('noBatteryWarn');
+  var notPluggedWarn = document.getElementById('notPluggedWarn');
+  var manualBox = document.getElementById('manualBox');
+  var logEl = document.getElementById('logEl');
+
+  var alarmOnCut = document.getElementById('alarmOnCut');
+  var alarmOnBack = document.getElementById('alarmOnBack');
+  var vibOpt = document.getElementById('vibOpt');
+  var flashOpt = document.getElementById('flashOpt');
+  var notifOpt = document.getElementById('notifOpt');
+  var delaySel = document.getElementById('delaySel');
+  var soundSel = document.getElementById('soundSel');
+  var volRange = document.getElementById('volRange');
+  var volLbl = document.getElementById('volLbl');
+
+  var monitoring = false;
+  var powerState = 'unknown';
+  var hasSeenCharging = false;
+  var battery = null;
+  var batterySupported = ('getBattery' in navigator);
+  var monitorStartTime = 0;
+  var pendingTimer = null;
+  var pendingState = null;
+  var clockTimer = null;
+  var wakeLock = null;
+
+  var audioCtx = null, sirenOsc = null, sirenGain = null, sirenTimer = null, vibTimer = null, flashTimer = null;
+
+  function nowStr(){ var d=new Date(); return d.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+  function todayStr(){ var d=new Date(); return d.toLocaleDateString('ar-EG')+' '+nowStr(); }
+
+  function loadSettings(){
+    try{
+      var s = JSON.parse(localStorage.getItem('powerAlarm_settings')||'{}');
+      if(s.alarmOnCut===false) alarmOnCut.checked=false;
+      if(s.alarmOnBack===false) alarmOnBack.checked=false;
+      if(s.vib===false) vibOpt.checked=false;
+      if(s.flash===false) flashOpt.checked=false;
+      if(s.notif===false) notifOpt.checked=false;
+      if(s.delay!==undefined) delaySel.value=String(s.delay);
+      if(s.sound) soundSel.value=s.sound;
+      if(s.vol!==undefined){ volRange.value=s.vol; volLbl.textContent=s.vol+'%'; }
+      var logs = JSON.parse(localStorage.getItem('powerAlarm_logs')||'[]');
+      renderLogs(logs);
+    }catch(e){}
+  }
+  function saveSettings(){
+    try{
+      localStorage.setItem('powerAlarm_settings', JSON.stringify({
+        alarmOnCut:alarmOnCut.checked, alarmOnBack:alarmOnBack.checked,
+        vib:vibOpt.checked, flash:flashOpt.checked, notif:notifOpt.checked,
+        delay:delaySel.value, sound:soundSel.value, vol:volRange.value
+      }));
+    }catch(e){}
+  }
+  [alarmOnCut,alarmOnBack,vibOpt,flashOpt,notifOpt,delaySel,soundSel,volRange].forEach(function(el){
+    el.addEventListener('change', function(){ volLbl.textContent=volRange.value+'%'; saveSettings(); });
+  });
+
+  function renderLogs(logs){
+    logEl.innerHTML='';
+    if(!logs.length){ logEl.innerHTML='<li class="empty">لا أحداث بعد</li>'; return; }
+    logs.slice().reverse().forEach(function(l){
+      var li=document.createElement('li'); li.className=l.k||'info'; li.textContent=l.t+' — '+l.m; logEl.appendChild(li);
+    });
+  }
+  function addLog(msg, kind){
+    try{
+      var logs=JSON.parse(localStorage.getItem('powerAlarm_logs')||'[]');
+      logs.push({t:todayStr(), m:msg, k:kind||'info'});
+      if(logs.length>120) logs=logs.slice(-120);
+      localStorage.setItem('powerAlarm_logs', JSON.stringify(logs));
+      renderLogs(logs);
+    }catch(e){}
+  }
+  document.getElementById('clearLogBtn').addEventListener('click', function(){
+    try{localStorage.removeItem('powerAlarm_logs');}catch(e){} renderLogs([]);
+  });
+
+  function setStatus(state, desc){
+    powerState = state;
+    statusCard.className = 'status '+state;
+    if(state==='on'){ statusTitle.textContent='✅ الكهرباء موجودة'; }
+    else if(state==='off'){ statusTitle.textContent='⚠️ الكهرباء مقطوعة'; }
+    else { statusTitle.textContent='بانتظار بدء المراقبة'; }
+    if(desc) statusDesc.textContent=desc;
+  }
+
+  function ensureAudio(){
+    if(!audioCtx){ var AC = window.AudioContext||window.webkitAudioContext; if(AC) audioCtx=new AC(); }
+    if(audioCtx && audioCtx.state==='suspended') audioCtx.resume();
+  }
+  function vol(){ return (parseInt(volRange.value,10)||100)/100; }
+
+  function stopSiren(){
+    if(sirenTimer){ clearInterval(sirenTimer); sirenTimer=null; }
+    if(vibTimer){ clearInterval(vibTimer); vibTimer=null; }
+    if(flashTimer){ clearInterval(flashTimer); flashTimer=null; }
+    document.body.classList.remove('flashing');
+    try{ if(navigator.vibrate) navigator.vibrate(0); }catch(e){}
+    try{ if(sirenOsc){ sirenOsc.stop(); sirenOsc.disconnect(); } }catch(e){}
+    try{ if(sirenGain){ sirenGain.disconnect(); } }catch(e){}
+    sirenOsc=null; sirenGain=null;
+    alarmBanner.hidden=true; stopAlarmBtn.hidden=true;
+  }
+
+  function startSirenLoop(type, forever){
+    ensureAudio();
+    stopSiren();
+    if(!audioCtx) return;
+    sirenGain=audioCtx.createGain(); sirenGain.gain.value=0.9*vol()+0.05; sirenGain.connect(audioCtx.destination);
+    sirenOsc=audioCtx.createOscillator(); sirenOsc.type='sawtooth'; sirenOsc.frequency.value=800; sirenOsc.connect(sirenGain); sirenOsc.start();
+    var step=0;
+    function tick(){
+      if(!sirenOsc) return;
+      var t=audioCtx.currentTime;
+      if(type==='siren'){ sirenOsc.frequency.setValueAtTime(step%2===0?650:1300, t); }
+      else if(type==='beep'){ sirenOsc.frequency.setValueAtTime(880, t); sirenGain.gain.setValueAtTime(step%2===0?(0.9*vol()+0.05):0.0001, t); }
+      else { sirenOsc.frequency.setValueAtTime(1050, t); }
+      step++;
+    }
+    tick();
+    sirenTimer=setInterval(tick, type==='beep'?350:650);
+    if(vibOpt.checked && navigator.vibrate){
+      var pat = type==='beep' ? [300,200] : [600,200];
+      try{navigator.vibrate(pat);}catch(e){}
+      vibTimer=setInterval(function(){ try{navigator.vibrate(pat);}catch(e){} }, 1200);
+    }
+    if(flashOpt.checked){
+      flashTimer=setInterval(function(){ document.body.classList.toggle('flashing'); }, 400);
+    }
+    alarmBanner.hidden=false; stopAlarmBtn.hidden=false;
+    if(!forever){ /* test mode stops externally */ }
+  }
+
+  function notify(title, body){
+    if(!notifOpt.checked) return;
+    try{
+      if('Notification' in window){
+        if(Notification.permission==='granted'){ new Notification(title,{body:body}); }
+      }
+    }catch(e){}
+  }
+
+  function triggerCut(source){
+    setStatus('off','انقطعت الكهرباء — '+nowStr()+' ('+source+')');
+    addLog('⚠️ انقطاع الكهرباء', 'cut');
+    notify('⚠️ انقطاع الكهرباء','انقطعت الكهرباء في '+nowStr());
+    if(monitoring && alarmOnCut.checked){ startSirenLoop(soundSel.value, true); }
+    else { alarmBanner.hidden=true; }
+  }
+  function triggerBack(source){
+    setStatus('on','الكهرباء عادت — '+nowStr()+' ('+source+')');
+    addLog('✅ عودة الكهرباء','back');
+    notify('✅ عودة الكهرباء','عادت الكهرباء في '+nowStr());
+    if(monitoring && alarmOnBack.checked){ startSirenLoop(soundSel.value==='siren'?'beep':soundSel.value, true); }
+  }
+
+  function handlePowerChange(newState, source){
+    if(newState===powerState && monitoring) return;
+    if(pendingTimer){ clearTimeout(pendingTimer); pendingTimer=null; }
+    var delaySec = parseInt(delaySel.value,10)||0;
+    if(!monitoring){
+      setStatus(newState, newState==='on'?'متصل بالشاحن':'غير متصل بالشاحن');
+      return;
+    }
+    if(delaySec===0){
+      if(newState==='off') triggerCut(source); else triggerBack(source);
+    } else {
+      pendingState=newState;
+      statusDesc.textContent='تغير محتمل... تأكيد خلال '+delaySec+' ثواني';
+      pendingTimer=setTimeout(function(){
+        pendingTimer=null;
+        var still = pendingState;
+        var actual = battery ? (battery.charging?'on':'off') : still;
+        if(!batterySupported) actual=still;
+        if(actual===still){ if(still==='off') triggerCut(source+' (بعد تأكيد)'); else triggerBack(source+' (بعد تأكيد)'); }
+        else { setStatus(actual, 'استقرت الحالة: '+(actual==='on'?'موجودة':'مقطوعة')); }
+      }, delaySec*1000);
+    }
+  }
+
+  async function requestWakeLock(){
+    try{
+      if('wakeLock' in navigator){ wakeLock=await navigator.wakeLock.request('screen'); }
+    }catch(e){}
+  }
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible' && monitoring) requestWakeLock(); });
+
+  async function startMonitoring(){
+    ensureAudio();
+    try{
+      if('Notification' in window && Notification.permission==='default' && notifOpt.checked){ await Notification.requestPermission(); }
+    }catch(e){}
+    await requestWakeLock();
+    monitoring=true; monitorStartTime=Date.now();
+    startBtn.hidden=true; stopMonBtn.hidden=false;
+    monitorEl.textContent='تعمل 🟢';
+    addLog('▶ بدء المراقبة','info');
+    if(battery){
+      hasSeenCharging = hasSeenCharging || battery.charging;
+      updateBatteryUI();
+      if(battery.charging){ setStatus('on','المراقبة تعمل — الكهرباء موجودة'); notPluggedWarn.hidden=true; }
+      else {
+        if(!hasSeenCharging){ setStatus('unknown','المراقبة تعمل — وصّل الشاحن أولاً'); notPluggedWarn.hidden=false; }
+        else { handlePowerChange('off','بطارية'); }
+      }
+    } else {
+      setStatus('unknown','وضع يدوي — استخدم أزرار المحاكاة');
+    }
+    clockTimer=setInterval(updateClock,1000);
+  }
+  function stopMonitoring(){
+    monitoring=false;
+    if(pendingTimer){clearTimeout(pendingTimer);pendingTimer=null;}
+    if(clockTimer){clearInterval(clockTimer);clockTimer=null;}
+    stopSiren();
+    try{ if(wakeLock){wakeLock.release(); wakeLock=null;} }catch(e){}
+    startBtn.hidden=false; stopMonBtn.hidden=true;
+    monitorEl.textContent='متوقفة';
+    setStatus(powerState==='off'?'off':powerState==='on'?'on':'unknown','المراقبة متوقفة');
+    addLog('⏹ إيقاف المراقبة','info');
+  }
+
+  function updateBatteryUI(){
+    if(!battery){ chargeStateEl.textContent='غير مدعوم'; batteryEl.textContent='—'; return; }
+    chargeStateEl.textContent=battery.charging?'⚡ يشحن':'🔋 لا يشحن';
+    batteryEl.textContent=Math.round(battery.level*100)+'%';
+    notPluggedWarn.hidden = battery.charging ? true : (monitoring && !hasSeenCharging ? false : battery.charging?true:false);
+    if(!battery.charging && monitoring && hasSeenCharging && powerState==='on'){ /* will come via event */ }
+  }
+  function updateClock(){
+    var s=Math.floor((Date.now()-monitorStartTime)/1000);
+    var h=String(Math.floor(s/3600)).padStart(2,'0'), m=String(Math.floor(s%3600/60)).padStart(2,'0'), ss=String(s%60).padStart(2,'0');
+    durationEl.textContent=h+':'+m+':'+ss;
+  }
+
+  startBtn.addEventListener('click', startMonitoring);
+  stopMonBtn.addEventListener('click', stopMonitoring);
+  stopAlarmBtn.addEventListener('click', function(){ stopSiren(); addLog('🔇 إيقاف المنبه يدوياً','info'); });
+
+  document.getElementById('testCutBtn').addEventListener('click', function(){
+    ensureAudio(); startSirenLoop(soundSel.value, false);
+    setTimeout(stopSiren, 3000);
+  });
+  document.getElementById('testBackBtn').addEventListener('click', function(){
+    ensureAudio(); startSirenLoop('beep', false);
+    setTimeout(stopSiren, 2500);
+  });
+  document.getElementById('simCutBtn').addEventListener('click', function(){
+    if(!monitoring){ alert('ابدأ المراقبة أولاً'); return; }
+    triggerCut('محاكاة يدوية');
+  });
+  document.getElementById('simBackBtn').addEventListener('click', function(){
+    if(!monitoring){ alert('ابدأ المراقبة أولاً'); return; }
+    stopSiren();
+    triggerBack('محاكاة يدوية');
+  });
+
+  window.addEventListener('online', function(){ addLog('🌐 عاد الاتصال بالإنترنت','info'); });
+  window.addEventListener('offline', function(){ addLog('📴 انقطع الاتصال بالإنترنت','cut'); });
+
+  async function initBattery(){
+    loadSettings();
+    if(!batterySupported){
+      noBatteryWarn.hidden=false;
+      chargeStateEl.textContent='غير مدعوم'; batteryEl.textContent='—';
+      setStatus('unknown','متصفحك لا يدعم كشف الشاحن — استخدم أزرار المحاكاة');
+      return;
+    }
+    try{
+      battery=await navigator.getBattery();
+      updateBatteryUI();
+      if(!battery.charging){ notPluggedWarn.hidden=false; }
+      battery.addEventListener('chargingchange', function(){
+        updateBatteryUI();
+        if(!monitoring) { setStatus(battery.charging?'on':'unknown', battery.charging?'متصل بالشاحن':'غير متصل — ابدأ المراقبة بعد التوصيل'); return; }
+        if(battery.charging){ hasSeenCharging=true; handlePowerChange('on','الشاحن'); }
+        else { if(!hasSeenCharging){ setStatus('unknown','فُصل الشاحن قبل بدء التتبع — وصّله أولاً'); notPluggedWarn.hidden=false; return; } handlePowerChange('off','الشاحن'); }
+      });
+      battery.addEventListener('levelchange', updateBatteryUI);
+    }catch(e){
+      noBatteryWarn.hidden=false;
+    }
+  }
+  initBattery();
+})();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
+</script>
+</body>
+</html>
